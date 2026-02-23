@@ -56,28 +56,101 @@ graph TD
 ---
 
 ### 3.4 New Component Definitions (The Modules)
-*Define the Specs and Prompts for the NEW tools you added (Router or Critic). You do not need to redefine the tools from Part 2.*
 
-#### **[Module A: The Router Configuration]**
-*(Fill this if you added a Router)*
+---
 
-*   **Tool Name:** (e.g., Intent Classifier)
-*   **Input Variable:** `{{input_text}}`
+#### **[Module A: The Parallel Worker Configuration]**
+*(Used to implement the Orchestrator-Workers (Parallel) pattern.)*
+
+*   **Tool Name:** Multi-Draft Parallel Worker
+*   **Input Variables:** `{{extracted_json}}`, `{{judge_report}}`
 *   **Output Categories:**
-    1.  [Label A] (e.g., REFUND)
-    2.  [Label B] (e.g., OTHER)
+    1. DRAFT_A_ENTHUSIASM
+    2. DRAFT_B_PERSONALITY
+    3. DRAFT_C_FIT
 *   **R.A.F.T. Prompt Draft:**
-    > (Paste your System Prompt for the Router here. It must act as a Classifier.)
+    > **ROLE:** You are the Multi-Draft Parallel Worker in a hardened AI-assisted cover letter workflow.  
+    >  
+    > **TASK:**  
+    > Consume `extracted_json` (facts) and `judge_report` (strategy) and generate THREE distinct, fully grounded cover letter drafts:
+    > - Draft A — Enthusiasm Mode  
+    > - Draft B — Personality Mode  
+    > - Draft C — Fit Mode  
+    >  
+    > **HARD RULES:**  
+    > - Do NOT invent facts.  
+    > - Do NOT inflate mastery or upgrade experience.  
+    > - Every factual claim must trace to `extracted_json` or `judge_report.safe_claims`.  
+    > - If gaps exist, incorporate `judge_report.narrative_pivots`.  
+    > - All three drafts must differ meaningfully in opening, emphasis, and structure.  
+    >  
+    > **OUTPUT:**  
+    > Return valid JSON only:
+    > {
+    >   "drafts": {
+    >     "draft_A_enthusiasm": {"cover_letter":"", "evidence_used":[], "gaps_handled":[]},
+    >     "draft_B_personality": {"cover_letter":"", "evidence_used":[], "gaps_handled":[]},
+    >     "draft_C_fit": {"cover_letter":"", "evidence_used":[], "gaps_handled":[]}
+    >   }
+    > }
 
-#### **[Module B: The Evaluator Configuration]**
-*(Fill this if you added a Loop)*
+---
 
-*   **Tool Name:** (e.g., Compliance Critic)
-*   **Input Variable:** `{{draft_output}}`
-*   **Evaluation Rubric:** (What are the specific pass/fail criteria?)
-    *   *Rule 1:* (e.g., Must not promise cash refunds > $50)
+#### **[Module B: The Evaluator Configuration — Gatekeeper Loop]**
+*(Implements Evaluator-Optimizer (Looping) for structural compliance.)*
+
+*   **Tool Name:** Gatekeeper Critic — Structural Audit
+*   **Input Variable:** `{{extracted_json}}`
+*   **Evaluation Rubric:**
+    *   *Rule 1:* Structured arrays must originate from explicitly labeled headers (Tool 5 label-like exception allowed).
+    *   *Rule 2:* No paraphrasing, inference, or narrative promotion into structured fields.
+    *   *Rule 3:* alignment_candidates must pair verbatim job requirement text with verbatim resume excerpts.
+    *   *Rule 4:* No semantic stitching across sections, sentences, or documents.
+    *   *Rule 5:* Enumerated voice_profile fields must match allowed values.
 *   **R.A.F.T. Prompt Draft:**
-    > (Paste your System Prompt for the Critic here. It must output PASS/FAIL and Reasoning.)
+    > **ROLE:** You are the Gatekeeper Critic.  
+    >  
+    > **TASK:** Audit `extracted_json` for structural and grounding compliance.  
+    >  
+    > **OUTPUT:** Return JSON only:
+    > {
+    >   "gatekeeper_status": "PASS | FAIL | TERMINAL_FAIL",
+    >   "workflow_status": "CONTINUE | RETRY | FAILED_AFTER_MAX_RETRIES",
+    >   "violations": [{"field":"","violation_type":"","explanation":""}]
+    > }
+    >  
+    > If FAIL and retry_count < 3 → workflow_status = RETRY.  
+    > If FAIL and retry_count ≥ 3 → TERMINAL_FAIL.
+
+---
+
+#### **[Module C: The Evaluator Configuration — Judge Loop]**
+*(Implements Evaluator-Optimizer (Looping) for logical and anti-inflation compliance.)*
+
+*   **Tool Name:** Judge Critic — Logic & Anti-Inflation Audit
+*   **Input Variable:** `{{judge_xml}}`, `{{extracted_json}}`
+*   **Evaluation Rubric:**
+    *   *Rule 1:* No inflated requirement language (e.g., mastery, expert, advanced) unless explicitly supported in `extracted_json`.
+    *   *Rule 2:* Job requirement wording may not be converted into candidate qualification claims.
+    *   *Rule 3:* Internship or simulation experience cannot be upgraded to production ownership.
+    *   *Rule 4:* All unsupported job requirements must appear in `<critical_gaps>` with corresponding pivots.
+    *   *Rule 5:* All strategic leverage points must trace directly to structured JSON inputs.
+    *   *Rule 6:* tone_direction must derive from voice_profile, tone_of_company, or company_personalization.
+*   **R.A.F.T. Prompt Draft:**
+    > **ROLE:** You are the Judge Critic enforcing logical integrity and anti-inflation compliance.  
+    >  
+    > **TASK:** Validate `judge_xml` against `extracted_json`.  
+    >  
+    > **OUTPUT:** Return JSON only:
+    > {
+    >   "judge_status": "PASS | FAIL | TERMINAL_FAIL",
+    >   "workflow_status": "CONTINUE | RETRY | FAILED_AFTER_MAX_RETRIES",
+    >   "violations": [{"section":"","violation_type":"","explanation":""}]
+    > }
+    >  
+    > If FAIL and retry_count < 3 → workflow_status = RETRY.  
+    > If FAIL and retry_count ≥ 3 → TERMINAL_FAIL.
+
 
 ---
 
